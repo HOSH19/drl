@@ -1,0 +1,48 @@
+environment:
+  grid_size: 20
+  state_representation: "feature"  # "grid", "feature", or "image"
+  initial_length: 3
+  reward_food: 10.0
+  reward_death: -10.0
+  reward_step: -0.1
+  reward_distance: 0.0  # Optional shaping (0 = disabled)
+
+dqn:
+  learning_rate: 1e-4
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995
+  replay_buffer_size: 100000
+  batch_size: 64
+  target_update_frequency: 1000
+  network: [128, 128, 64]
+  activation: "relu"
+
+ppo:
+  learning_rate: 3e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01
+  max_grad_norm: 0.5
+  update_epochs: 10
+  batch_size: 64
+  network: [128, 128, 64]
+  activation: "relu"
+
+training:
+  algorithm: "dqn"  # "dqn" or "ppo"
+  total_episodes: 5000
+  eval_frequency: 100
+  save_frequency: 500
+  update_frequency: 4  # For DQN: update every N steps
+  log_dir: "./logs/snake"
+  checkpoint_dir: "./checkpoints/snake"
+  experiment_name: "snake_dqn"
+
+evaluation:
+  num_episodes: 10
+  render: false
+  save_videos: false
