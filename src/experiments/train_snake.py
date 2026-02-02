@@ -42,6 +42,7 @@ def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir):
         done = False
         
         # Collect episode
+        final_info = info  # Initialize with reset info
         while not done:
             action = agent.act(state, deterministic=False)
             next_state, reward, terminated, truncated, step_info = env.step(action)
@@ -53,6 +54,7 @@ def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir):
             episode_reward += reward
             episode_length += 1
             state = next_state
+            final_info = step_info  # Update with latest step info (contains final score)
         
         # Train agent
         if len(agent.replay_buffer) >= agent.batch_size:
@@ -60,7 +62,7 @@ def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir):
                 metrics = agent.train_step()
                 metrics_tracker.record_episode(
                     reward=episode_reward,
-                    score=info.get("score", 0),
+                    score=final_info.get("score", 0),  # Use final step info
                     length=episode_length,
                     loss=metrics.get("loss", None),
                     epsilon=metrics.get("epsilon", None)
@@ -68,14 +70,14 @@ def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir):
             else:
                 metrics_tracker.record_episode(
                     reward=episode_reward,
-                    score=info.get("score", 0),
+                    score=final_info.get("score", 0),  # Use final step info
                     length=episode_length,
                     epsilon=agent.epsilon
                 )
         else:
             metrics_tracker.record_episode(
                 reward=episode_reward,
-                score=info.get("score", 0),
+                score=final_info.get("score", 0),  # Use final step info
                 length=episode_length,
                 epsilon=agent.epsilon
             )
@@ -138,6 +140,7 @@ def train_ppo(env, agent, config, metrics_tracker, checkpoint_dir):
         done = False
         
         # Collect episode
+        final_info = info  # Initialize with reset info
         while not done:
             action, log_prob, value = agent.act(state, deterministic=False)
             next_state, reward, terminated, truncated, step_info = env.step(action)
@@ -149,20 +152,21 @@ def train_ppo(env, agent, config, metrics_tracker, checkpoint_dir):
             episode_reward += reward
             episode_length += 1
             state = next_state
+            final_info = step_info  # Update with latest step info (contains final score)
         
         # Train agent
         if episode % update_frequency == 0 and len(agent.states) > 0:
             metrics = agent.train_step()
             metrics_tracker.record_episode(
                 reward=episode_reward,
-                score=info.get("score", 0),
+                score=final_info.get("score", 0),  # Use final step info
                 length=episode_length,
                 loss=metrics.get("loss", None)
             )
         else:
             metrics_tracker.record_episode(
                 reward=episode_reward,
-                score=info.get("score", 0),
+                score=final_info.get("score", 0),  # Use final step info
                 length=episode_length
             )
         
