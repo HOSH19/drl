@@ -154,9 +154,10 @@ def train_ppo(env, agent, config, metrics_tracker, checkpoint_dir):
             state = next_state
             final_info = step_info  # Update with latest step info (contains final score)
         
-        # Train agent
+        # Train agent - update more frequently for PPO (every episode recommended)
+        # Bootstrap value is 0.0 since episode ended
         if episode % update_frequency == 0 and len(agent.states) > 0:
-            metrics = agent.train_step()
+            metrics = agent.train_step(next_value=0.0)
             metrics_tracker.record_episode(
                 reward=episode_reward,
                 score=final_info.get("score", 0),  # Use final step info
