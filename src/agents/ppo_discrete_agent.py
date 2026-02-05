@@ -11,7 +11,11 @@ import numpy as np
 from typing import Tuple, Optional, Dict, List
 import os
 
-from ..networks.dqn_network import DQNNetwork
+try:
+    from ..networks.dqn_network import DQNNetwork
+except ImportError:
+    # Fallback for Colab/direct execution
+    from networks.dqn_network import DQNNetwork
 
 
 class PPODiscreteAgent:
@@ -409,7 +413,7 @@ class PPODiscreteAgent:
     
     def load(self, filepath: str):
         """Load agent state from file."""
-        checkpoint = torch.load(filepath, map_location=self.device)
+        checkpoint = torch.load(filepath, map_location=self.device, weights_only=False)
         self.actor.load_state_dict(checkpoint["actor_state_dict"])
         self.critic.load_state_dict(checkpoint["critic_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

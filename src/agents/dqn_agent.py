@@ -10,8 +10,13 @@ import numpy as np
 from typing import Tuple, Optional, Dict, Any
 import os
 
-from ..networks.dqn_network import DQNNetwork
-from ..utils.replay_buffer import ReplayBuffer
+try:
+    from ..networks.dqn_network import DQNNetwork
+    from ..utils.replay_buffer import ReplayBuffer
+except ImportError:
+    # Fallback for Colab/direct execution
+    from networks.dqn_network import DQNNetwork
+    from utils.replay_buffer import ReplayBuffer
 
 
 class DQNAgent:
@@ -268,7 +273,7 @@ class DQNAgent:
     
     def load(self, filepath: str):
         """Load agent state from file."""
-        checkpoint = torch.load(filepath, map_location=self.device)
+        checkpoint = torch.load(filepath, map_location=self.device, weights_only=False)
         self.q_network.load_state_dict(checkpoint["q_network_state_dict"])
         self.target_network.load_state_dict(checkpoint["target_network_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

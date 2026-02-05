@@ -72,10 +72,11 @@ class SnakeEnv(gym.Env):
                 low=0, high=2, shape=(grid_size, grid_size), dtype=np.int32
             )
         elif state_representation == "feature":
-            # Feature vector: [head_x, head_y, food_x, food_y, direction, 
+            # Feature vector: [head_x, head_y, food_x, food_y, direction_onehot(4), 
             #                   body_length, danger_straight, danger_left, danger_right]
+            # Total: 2 + 2 + 4 + 1 + 3 = 12 features
             self.observation_space = spaces.Box(
-                low=-np.inf, high=np.inf, shape=(11,), dtype=np.float32
+                low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32
             )
         elif state_representation == "image":
             # RGB image representation

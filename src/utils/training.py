@@ -12,7 +12,7 @@ from datetime import datetime
 
 class MetricsTracker:
     """Track training metrics over episodes."""
-    
+
     def __init__(self):
         """Initialize metrics tracker."""
         self.episode_rewards = []
@@ -20,7 +20,7 @@ class MetricsTracker:
         self.episode_lengths = []
         self.training_losses = []
         self.epsilon_values = []  # For DQN
-        
+
     def record_episode(
         self,
         reward: float,
@@ -31,7 +31,7 @@ class MetricsTracker:
     ):
         """
         Record metrics for an episode.
-        
+
         Args:
             reward: Total episode reward
             score: Number of food eaten (score)
@@ -42,29 +42,29 @@ class MetricsTracker:
         self.episode_rewards.append(reward)
         self.episode_scores.append(score)
         self.episode_lengths.append(length)
-        
+
         if loss is not None:
             self.training_losses.append(loss)
         if epsilon is not None:
             self.epsilon_values.append(epsilon)
-    
+
     def get_statistics(self, window: int = 100) -> Dict[str, float]:
         """
         Get statistics over recent episodes.
-        
+
         Args:
             window: Number of recent episodes to consider
-        
-        Returns:
+
+        Returns: 
             Dictionary with statistics
         """
         if len(self.episode_rewards) == 0:
             return {}
-        
+
         recent_rewards = self.episode_rewards[-window:]
         recent_scores = self.episode_scores[-window:]
         recent_lengths = self.episode_lengths[-window:]
-        
+
         stats = {
             "mean_reward": np.mean(recent_rewards),
             "std_reward": np.std(recent_rewards),
@@ -75,16 +75,16 @@ class MetricsTracker:
             "mean_length": np.mean(recent_lengths),
             "std_length": np.std(recent_lengths),
         }
-        
+
         if len(self.training_losses) > 0:
             recent_losses = self.training_losses[-window:]
             stats["mean_loss"] = np.mean(recent_losses)
-        
+
         if len(self.epsilon_values) > 0:
             stats["current_epsilon"] = self.epsilon_values[-1]
-        
+
         return stats
-    
+
     def save(self, filepath: str):
         """Save metrics to JSON file."""
         data = {
@@ -97,7 +97,7 @@ class MetricsTracker:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
-    
+
     def load(self, filepath: str):
         """Load metrics from JSON file."""
         with open(filepath, 'r') as f:
@@ -108,6 +108,9 @@ class MetricsTracker:
         self.training_losses = data.get("training_losses", [])
         self.epsilon_values = data.get("epsilon_values", [])
 
+def create_checkpoint_dir(path: str):
+    """Creates a directory if it doesn't exist."""
+    os.makedirs(path, exist_ok=True)
 
 def evaluate_agent(
     env,
@@ -118,84 +121,68 @@ def evaluate_agent(
 ) -> Dict[str, Any]:
     """
     Evaluate agent performance.
-    
+
     Args:
         env: Environment instance
         agent: Agent instance
         num_episodes: Number of episodes to evaluate
-        render: Whether to render episodes
-        deterministic: Whether to use deterministic policy
-    
-    Returns:
-        Dictionary with evaluation metrics
+        render: Whether to render
     """
-    agent.eval()
-    
     episode_rewards = []
     episode_scores = []
     episode_lengths = []
-    
-    for episode in range(num_episodes):
+
+    if render:
+        from src.environments.snake_renderer import SnakeRenderer
+        renderer = SnakeRenderer(env.grid_size)
+
+    for _ in range(num_episodes):
         state, info = env.reset()
-        episode_reward = 0
-        episode_length = 0
         done = False
-        
+        total_reward = 0
+        steps = 0
+
         while not done:
-            if hasattr(agent, 'act'):
-                # DQN agent
-                action = agent.act(state, deterministic=deterministic)
-                next_state, reward, terminated, truncated, step_info = env.step(action)
-                done = terminated or truncated
-                state = next_state
-            else:
-                # PPO agent (returns action, log_prob, value)
-                action, _, _ = agent.act(state, deterministic=deterministic)
-                next_state, reward, terminated, truncated, step_info = env.step(action)
-                done = terminated or truncated
-                state = next_state
-            
-            episode_reward += reward
-            episode_length += 1
-            
+            action = agent.act(state, deterministic=deterministic)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+            total_reward += reward
+            steps += 1
+            state = next_state
+
             if render:
-                env.render()
-        
-        episode_rewards.append(episode_reward)
-        episode_scores.append(info.get("score", 0))
-        episode_lengths.append(episode_length)
-    
-    agent.train()
-    
-    results = {
-        "mean_reward": np.mean(episode_rewards),
-        "std_reward": np.std(episode_rewards),
-        "max_reward": np.max(episode_rewards),
-        "mean_score": np.mean(episode_scores),
-        "std_score": np.std(episode_scores),
-        "max_score": np.max(episode_scores),
-        "mean_length": np.mean(episode_lengths),
-        "std_length": np.std(episode_lengths),
-        "episode_rewards": episode_rewards,
-        "episode_scores": episode_scores,
-        "episode_lengths": episode_lengths
+                # Pass specific arguments to renderer.render()
+                renderer.render(env.snake, env.food, env.score, env.steps)
+
+        episode_rewards.append(total_reward)
+        episode_lengths.append(steps)
+        episode_scores.append(env.score) # Fixed: Use env.score directly
+
+        if render:
+            renderer.close()
+
+    # Calculate statistics
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    max_reward = np.max(episode_rewards)
+
+    mean_score = np.mean(episode_scores)
+    std_score = np.std(episode_scores)
+    max_score = np.max(episode_scores)
+
+    mean_length = np.mean(episode_lengths)
+    std_length = np.std(episode_lengths)
+
+    return {
+        "mean_reward": float(mean_reward),
+        "std_reward": float(std_reward),
+        "max_reward": float(max_reward),
+        "mean_score": float(mean_score),
+        "std_score": float(std_score),
+        "max_score": int(max_score),
+        "mean_length": float(mean_length),
+        "std_length": float(std_length),
+        "episode_rewards": [float(r) for r in episode_rewards],
+        "episode_scores": [int(s) for s in episode_scores],
+        "episode_lengths": [int(l) for l in episode_lengths],
     }
-    
-    return results
-
-
-def create_checkpoint_dir(base_dir: str, experiment_name: str) -> str:
-    """
-    Create checkpoint directory with timestamp.
-    
-    Args:
-        base_dir: Base directory for checkpoints
-        experiment_name: Name of experiment
-    
-    Returns:
-        Path to checkpoint directory
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    checkpoint_dir = os.path.join(base_dir, experiment_name, timestamp)
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    return checkpoint_dir

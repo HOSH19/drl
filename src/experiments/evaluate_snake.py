@@ -148,7 +148,7 @@ def main():
         state_shape = (obs_space.n,)
     
     # Determine algorithm from checkpoint or config
-    checkpoint = torch.load(args.checkpoint, map_location='cpu')
+    checkpoint = torch.load(args.checkpoint, map_location='cpu', weights_only=False)
     algorithm = checkpoint.get('algorithm', config['training']['algorithm'].lower())
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
