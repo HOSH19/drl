@@ -1,0 +1,48 @@
+environment:
+  grid_size: 15  # Smaller grid - easier to learn
+  state_representation: "feature"
+  initial_length: 3
+  reward_food: 50.0  # Much higher reward for eating food
+  reward_death: -10.0  # Death penalty
+  reward_step: 0.0  # NO step penalty - let agent explore freely
+  reward_distance: 1.0  # STRONG distance reward - guides agent to food
+
+dqn:
+  learning_rate: 3e-4  # Higher learning rate for faster learning
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.05  # Keep some exploration
+  epsilon_decay: 0.9998  # Very slow decay - explore for 5000+ episodes
+  replay_buffer_size: 50000
+  batch_size: 32
+  target_update_frequency: 200  # Update target network more frequently
+  network: [128, 128]  # Simpler but still capable
+  activation: "relu"
+
+ppo:
+  learning_rate: 3e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01
+  max_grad_norm: 0.5
+  update_epochs: 10
+  batch_size: 64
+  network: [128, 128, 64]
+  activation: "relu"
+
+training:
+  algorithm: "dqn"
+  total_episodes: 5000  # More episodes for better learning
+  eval_frequency: 100
+  save_frequency: 500
+  update_frequency: 2  # Update more frequently
+  log_dir: "./logs/snake"
+  checkpoint_dir: "./checkpoints/snake"
+  experiment_name: "snake_dqn_improved"
+
+evaluation:
+  num_episodes: 10
+  render: false
+  save_videos: false
