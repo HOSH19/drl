@@ -2,25 +2,25 @@ environment:
   grid_size: 20
   state_representation: "feature"  # "grid", "feature", or "image"
   initial_length: 3
-  reward_food: 10.0
+  reward_food: 50.0  # Increased from 30.0 - stronger incentive for eating food
   reward_death: -10.0
-  reward_step: -0.1
-  reward_distance: 0.0  # Optional shaping (0 = disabled)
+  reward_step: 0.0  # Changed from -0.1 - no survival penalty, allows exploration
+  reward_distance: 1.0  # ENABLED - guides agent toward food (was 0.0)
 
 dqn:
-  learning_rate: 0.0001  # 1e-4
+  learning_rate: 0.0003  # Increased from 1e-4 (3e-4) - faster learning
   gamma: 0.99
   epsilon_start: 1.0
-  epsilon_end: 0.01
-  epsilon_decay: 0.995
-  replay_buffer_size: 100000
-  batch_size: 64
-  target_update_frequency: 1000
-  network: [128, 128, 64]
+  epsilon_end: 0.05  # Increased from 0.01 - maintains some exploration
+  epsilon_decay: 0.9995  # Slower decay from 0.995 - explores longer (reaches 0.05 at ~3000 episodes)
+  replay_buffer_size: 100000  # Large buffer for stable learning
+  batch_size: 64  # Good balance between stability and speed
+  target_update_frequency: 500  # More frequent updates from 1000 - faster Q-value propagation
+  network: [256, 256, 128]  # Larger network from [128,128,64] - more capacity for complex policies
   activation: "relu"
 
 ppo:
-  learning_rate: 0.0003  # 3e-4
+  learning_rate: 3e-4
   gamma: 0.99
   gae_lambda: 0.95
   clip_epsilon: 0.2
@@ -37,7 +37,7 @@ training:
   total_episodes: 5000
   eval_frequency: 100
   save_frequency: 500
-  update_frequency: 4  # For DQN: update every N steps
+  update_frequency: 2  # More frequent updates from 4 - faster learning (update every 2 episodes)
   log_dir: "./logs/snake"
   checkpoint_dir: "./checkpoints/snake"
   experiment_name: "snake_dqn"

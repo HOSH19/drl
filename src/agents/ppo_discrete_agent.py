@@ -272,9 +272,12 @@ class PPODiscreteAgent:
         
         return advantages, returns
     
-    def train_step(self) -> Dict[str, float]:
+    def train_step(self, next_value: float = 0.0) -> Dict[str, float]:
         """
         Perform PPO update on stored trajectories.
+        
+        Args:
+            next_value: Value of next state for bootstrapping (0 if episode ended)
         
         Returns:
             Dictionary with training metrics
@@ -282,8 +285,8 @@ class PPODiscreteAgent:
         if len(self.states) == 0:
             return {"loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "entropy": 0.0}
         
-        # Compute advantages and returns
-        advantages, returns = self.compute_gae()
+        # Compute advantages and returns with proper bootstrapping
+        advantages, returns = self.compute_gae(next_value=next_value)
         
         # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)

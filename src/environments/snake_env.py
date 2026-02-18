@@ -72,8 +72,9 @@ class SnakeEnv(gym.Env):
                 low=0, high=2, shape=(grid_size, grid_size), dtype=np.int32
             )
         elif state_representation == "feature":
-            # Feature vector: [head_x, head_y, food_x, food_y, direction_onehot(4), 
+            # Feature vector: [head_x, head_y, food_dx, food_dy (relative to head), direction_onehot(4),
             #                   body_length, danger_straight, danger_left, danger_right]
+            # food_dx/dy = (food - head) / grid_size in [-1, 1] - makes "go toward food" easy to learn
             # Total: 2 + 2 + 4 + 1 + 3 = 12 features
             self.observation_space = spaces.Box(
                 low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32
@@ -163,11 +164,16 @@ class SnakeEnv(gym.Env):
         # Move snake head
         dx, dy = self.directions[action]
         head_x, head_y = self.snake[0]
+        old_head = self.snake[0]  # Store old head position BEFORE moving
         new_head = (head_x + dx, head_y + dy)
+        
+        # Calculate old distance BEFORE modifying snake (for distance reward)
+        old_dist = self._distance_to_food(old_head) if self.reward_distance > 0 else 0
         
         # Check for collisions
         terminated = False
         truncated = False
+        food_eaten = False  # Initialize food_eaten flag
         
         # Wall collision
         if (new_head[0] < 0 or new_head[0] >= self.grid_size or
@@ -184,8 +190,9 @@ class SnakeEnv(gym.Env):
             # Move snake
             self.snake.insert(0, new_head)
             
-            # Check if food eaten
-            if new_head == self.food:
+            # Check if food eaten (BEFORE spawning new food)
+            food_eaten = (new_head == self.food)
+            if food_eaten:
                 self.score += 1
                 self._spawn_food()
                 reward = self.reward_food
@@ -196,10 +203,19 @@ class SnakeEnv(gym.Env):
             
             # Add distance-based reward if enabled
             if self.reward_distance > 0 and not terminated:
-                old_dist = self._distance_to_food(self.snake[1] if len(self.snake) > 1 else self.snake[0])
-                new_dist = self._distance_to_food(new_head)
-                distance_reward = (old_dist - new_dist) * self.reward_distance
-                reward += distance_reward
+                if food_eaten:
+                    # When food is eaten, reward the movement that reached it
+                    # old_dist = distance from old_head to the food that was just eaten
+                    # new_dist = 0 (we reached the food)
+                    # This gives a bonus proportional to how far away the food was
+                    new_dist = 0
+                    distance_reward = (old_dist - new_dist) * self.reward_distance
+                    reward += distance_reward
+                else:
+                    # Normal case: calculate distance to current food
+                    new_dist = self._distance_to_food(new_head)
+                    distance_reward = (old_dist - new_dist) * self.reward_distance
+                    reward += distance_reward
             
             # Check max steps
             if self.steps >= self.max_steps:
@@ -208,11 +224,13 @@ class SnakeEnv(gym.Env):
         # Get next observation
         observation = self._get_observation()
         
+        # Store food_eaten flag before it gets lost
+        # (food_eaten was calculated before spawning new food)
         info = {
             "score": self.score,
             "snake_length": len(self.snake),
             "steps": self.steps,
-            "food_eaten": new_head == self.food if not terminated else False
+            "food_eaten": food_eaten if not terminated else False
         }
         
         return observation, reward, terminated, truncated, info
@@ -262,11 +280,16 @@ class SnakeEnv(gym.Env):
         head_x, head_y = self.snake[0]
         food_x, food_y = self.food
         
-        # Normalize coordinates to [0, 1]
+        # Normalize head position to [0, 1]
         head_x_norm = head_x / self.grid_size
         head_y_norm = head_y / self.grid_size
-        food_x_norm = food_x / self.grid_size
-        food_y_norm = food_y / self.grid_size
+        
+        # RELATIVE direction to food: (food - head) / grid_size, range [-1, 1]
+        # Positive food_dx = food is to the RIGHT -> agent should consider going RIGHT
+        # Positive food_dy = food is BELOW -> agent should consider going DOWN
+        # This makes "go toward food" directly learnable from the input
+        food_dx_norm = (food_x - head_x) / self.grid_size
+        food_dy_norm = (food_y - head_y) / self.grid_size
         
         # Direction as one-hot (4 values)
         direction_onehot = np.zeros(4)
@@ -282,8 +305,8 @@ class SnakeEnv(gym.Env):
         features = np.array([
             head_x_norm,
             head_y_norm,
-            food_x_norm,
-            food_y_norm,
+            food_dx_norm,
+            food_dy_norm,
             *direction_onehot,
             body_length_norm,
             danger_straight,
