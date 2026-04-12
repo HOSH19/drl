@@ -9,7 +9,7 @@ import yaml
 import argparse
 from pathlib import Path
 
-# Add src to path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
@@ -17,7 +17,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from environments import SnakeEnv
+from environments.snake_env import snake_env_from_config
 from agents import DQNAgent, PPODiscreteAgent
 from utils.training import evaluate_agent
 from utils.visualization import plot_policy_heatmap
@@ -26,7 +26,7 @@ from utils.visualization import plot_policy_heatmap
 def create_game_video(env, agent, num_episodes=3, save_dir="./videos"):
     """
     Create video of agent playing the game.
-    
+
     Args:
         env: Environment instance
         agent: Trained agent
@@ -35,18 +35,18 @@ def create_game_video(env, agent, num_episodes=3, save_dir="./videos"):
     """
     os.makedirs(save_dir, exist_ok=True)
     agent.eval()
-    
+
     for episode in range(num_episodes):
         frames = []
         state, info = env.reset()
         done = False
-        
+
         while not done:
-            # Render frame
+
             if env.render_mode == "rgb_array":
                 frame = env.render()
             else:
-                # Use renderer
+
                 from environments.snake_renderer import SnakeRenderer
                 renderer = SnakeRenderer(env.grid_size)
                 renderer.render(
@@ -55,35 +55,33 @@ def create_game_video(env, agent, num_episodes=3, save_dir="./videos"):
                     env.score,
                     env.steps
                 )
-                # Capture matplotlib figure
+
                 fig = plt.gcf()
                 fig.canvas.draw()
                 frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
                 frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            
+
             frames.append(frame)
-            
-            # Take action
-            if isinstance(agent, DQNAgent):
-                action = agent.act(state, deterministic=True)
-            else:
-                action, _, _ = agent.act(state, deterministic=True)
-            
+
+
+            result = agent.act(state, deterministic=True)
+            action = result[0] if isinstance(result, tuple) else result
+
             state, reward, terminated, truncated, step_info = env.step(action)
             done = terminated or truncated
-        
-        # Save video (simplified - save as image sequence)
+
+
         episode_dir = os.path.join(save_dir, f"episode_{episode+1}")
         os.makedirs(episode_dir, exist_ok=True)
-        
+
         for idx, frame in enumerate(frames):
             plt.imsave(
                 os.path.join(episode_dir, f"frame_{idx:04d}.png"),
                 frame
             )
-        
+
         print(f"Episode {episode+1} saved to {episode_dir} ({len(frames)} frames)")
-    
+
     agent.train()
 
 
@@ -123,37 +121,32 @@ def main():
         help='Generate policy heatmap'
     )
     args = parser.parse_args()
-    
-    # Load config
+
+
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
-    
-    # Create environment
-    env = SnakeEnv(
-        grid_size=config['environment']['grid_size'],
-        state_representation=config['environment']['state_representation'],
-        initial_length=config['environment']['initial_length'],
-        reward_food=config['environment']['reward_food'],
-        reward_death=config['environment']['reward_death'],
-        reward_step=config['environment']['reward_step'],
-        reward_distance=config['environment']['reward_distance'],
-        render_mode="human" if args.render else None
+
+
+    env = snake_env_from_config(
+        config['environment'],
+        render_mode="human" if args.render else None,
     )
-    
-    # Determine state shape
+
+
     obs_space = env.observation_space
     if hasattr(obs_space, 'shape'):
         state_shape = obs_space.shape
     else:
         state_shape = (obs_space.n,)
-    
-    # Determine algorithm from checkpoint or config
+
+
     checkpoint = torch.load(args.checkpoint, map_location='cpu', weights_only=False)
     algorithm = checkpoint.get('algorithm', config['training']['algorithm'].lower())
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # Create agent
+
+    from utils.training import get_device
+    device = get_device()
+
+
     if algorithm == "dqn" or 'q_network_state_dict' in checkpoint:
         agent = DQNAgent(
             state_shape=state_shape,
@@ -189,12 +182,12 @@ def main():
             state_representation=config['environment']['state_representation'],
             device=device
         )
-    
-    # Load checkpoint
+
+
     agent.load(args.checkpoint)
     print(f"Loaded model from {args.checkpoint}")
-    
-    # Evaluate
+
+
     print(f"\nEvaluating agent for {args.num_episodes} episodes...")
     results = evaluate_agent(
         env,
@@ -203,8 +196,8 @@ def main():
         render=args.render,
         deterministic=True
     )
-    
-    # Print results
+
+
     print("\n" + "="*50)
     print("Evaluation Results")
     print("="*50)
@@ -214,13 +207,13 @@ def main():
     print(f"Max Score: {results['max_score']:.2f}")
     print(f"Mean Length: {results['mean_length']:.2f} ± {results['std_length']:.2f}")
     print("="*50)
-    
-    # Save videos if requested
+
+
     if args.save_videos:
         print("\nCreating videos...")
         create_game_video(env, agent, num_episodes=3, save_dir="./videos")
-    
-    # Generate policy heatmap if requested
+
+
     if args.policy_heatmap:
         print("\nGenerating policy heatmap...")
         plot_policy_heatmap(

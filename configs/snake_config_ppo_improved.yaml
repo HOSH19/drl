@@ -1,43 +1,43 @@
 environment:
-  grid_size: 15  # Start with smaller grid for easier learning
+  grid_size: 15
   state_representation: "feature"
   initial_length: 3
-  reward_food: 50.0  # High reward for eating food
-  reward_death: -10.0  # Death penalty
-  reward_step: 0.0  # NO step penalty - let agent explore freely
-  reward_distance: 1.0  # STRONG distance reward - guides agent to food
+  reward_food: 1.0
+  reward_death: -1.0
+  reward_step: -0.005
+  reward_distance: 0.15
 
 dqn:
-  learning_rate: 0.0003  # Higher learning rate for faster learning (3e-4)
+  learning_rate: 0.0003
   gamma: 0.99
   epsilon_start: 1.0
-  epsilon_end: 0.05  # Keep some exploration
-  epsilon_decay: 0.9998  # Very slow decay - explore for 5000+ episodes
+  epsilon_end: 0.05
+  epsilon_decay: 0.9998
   replay_buffer_size: 50000
   batch_size: 32
-  target_update_frequency: 200  # Update target network more frequently
-  network: [128, 128]  # Simpler but still capable
+  target_update_frequency: 200
+  network: [128, 128]
   activation: "relu"
 
 ppo:
-  learning_rate: 0.0005  # Slightly higher for faster learning (5e-4)
+  learning_rate: 0.0005
   gamma: 0.99
   gae_lambda: 0.95
   clip_epsilon: 0.2
   value_coef: 0.5
-  entropy_coef: 0.05  # Increased for better exploration
+  entropy_coef: 0.02
   max_grad_norm: 0.5
-  update_epochs: 15  # More training epochs per batch
-  batch_size: 32  # Smaller batches for more frequent updates
+  update_epochs: 15
+  batch_size: 32
   network: [128, 128, 64]
   activation: "relu"
 
 training:
-  algorithm: "ppo"  # Using PPO
-  total_episodes: 5000  # More episodes for better learning
+  algorithm: "ppo"
+  total_episodes: 5000
   eval_frequency: 100
   save_frequency: 500
-  update_frequency: 1  # Update every episode for PPO (faster learning)
+  update_frequency: 1
   log_dir: "./logs/snake"
   checkpoint_dir: "./checkpoints/snake"
   experiment_name: "snake_ppo_improved"

@@ -1,120 +1,88 @@
 # Snake Game Deep RL Project
 
-A comprehensive deep reinforcement learning project for training agents to play Snake using DQN and PPO algorithms.
+A deep reinforcement learning project for training agents to play Snake using DQN and PPO algorithms.
 
 ## Features
 
-- **Custom Snake Environment**: Gymnasium-compatible environment with configurable state representations
-- **Multiple Algorithms**: DQN (Deep Q-Network) and PPO (Proximal Policy Optimization) implementations
-- **Flexible State Representations**: Support for grid, feature vector, and image-based observations
-- **Comprehensive Visualization**: Training curves, policy heatmaps, and game replays
-- **Experiment Notebook**: Interactive Jupyter notebook for exploration
+- **Custom Snake Environment**: Gymnasium-compatible with relative direction-to-food features for easier learning
+- **Algorithms**: DQN and PPO (with rollout-based updates)
+- **Apple Silicon (M1/M2/M3)**: Automatic MPS device detection for GPU acceleration
+- **State Representations**: Feature vector, grid, or image
 
 ## Project Structure
 
 ```
 drl/
 ├── src/
-│   ├── environments/
-│   │   ├── snake_env.py          # Snake game environment
-│   │   └── snake_renderer.py     # Visualization renderer
-│   ├── agents/
-│   │   ├── dqn_agent.py          # DQN agent implementation
-│   │   └── ppo_discrete_agent.py # PPO agent for discrete actions
-│   ├── networks/
-│   │   └── dqn_network.py        # Q-network architectures
-│   ├── utils/
-│   │   ├── replay_buffer.py     # Experience replay buffer
-│   │   ├── training.py           # Training utilities
-│   │   └── visualization.py     # Visualization functions
-│   └── experiments/
-│       ├── train_snake.py        # Main training script
-│       └── evaluate_snake.py     # Evaluation script
-├── configs/
-│   └── snake_config.yaml         # Configuration file
+│   ├── environments/     # Snake game environment
+│   ├── agents/           # DQN and PPO agents
+│   ├── networks/         # Neural network architectures
+│   ├── utils/            # Training utilities, visualization
+│   └── experiments/      # train_snake.py, evaluate_snake.py
+├── configs/              # snake_config.yaml
 ├── notebooks/
-│   └── snake_experiments.ipynb   # Interactive experiments
+│   ├── snake_experiments.ipynb   # Interactive training & experiments
+│   ├── watch_agent_play.ipynb    # Watch trained agent
+│   └── colab_snake_setup.ipynb   # Google Colab setup
+├── run_snake_training.py  # Quick-start script (flat checkpoints)
 └── requirements.txt
 ```
 
 ## Installation
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
 cd drl
-```
-
-2. Install dependencies:
-```bash
 pip install -r requirements.txt
 ```
 
-## Quick Start
+**Apple Silicon (M2/M3)**: PyTorch will automatically use MPS when available. No extra setup needed.
 
-### Training
+## Quick Start (Local / M2 Mac)
 
-Train a DQN agent:
+### Option 1: Training script (recommended)
+
 ```bash
+# Train (saves to checkpoints/snake/)
+python run_snake_training.py
+
+# Watch trained agent
+python run_snake_training.py --watch --checkpoint checkpoints/snake/best_model.pth
+```
+
+### Option 2: Experiment script (timestamped checkpoints)
+
+```bash
+# Train (saves to checkpoints/snake/snake_ppo/YYYYMMDD_HHMMSS/)
 python src/experiments/train_snake.py --config configs/snake_config.yaml
+
+# Watch
+python src/experiments/train_snake.py --watch --checkpoint checkpoints/snake/snake_ppo/20250217_120000/best_model.pth
 ```
 
-Train a PPO agent (modify config to set `algorithm: "ppo"`):
-```bash
-python src/experiments/train_snake.py --config configs/snake_config.yaml
-```
+### Option 3: Jupyter notebooks
 
-### Evaluation
-
-Evaluate a trained model:
-```bash
-python src/experiments/evaluate_snake.py \
-    --checkpoint checkpoints/snake/snake_dqn/YYYYMMDD_HHMMSS/best_model.pth \
-    --num_episodes 10 \
-    --render
-```
-
-### Interactive Notebook
-
-Open the Jupyter notebook for interactive exploration:
 ```bash
 jupyter notebook notebooks/snake_experiments.ipynb
+# or
+jupyter notebook notebooks/watch_agent_play.ipynb
 ```
+
+Run from project root. Notebooks auto-detect project directory.
 
 ## Configuration
 
-Edit `configs/snake_config.yaml` to customize:
+Edit `configs/snake_config.yaml`:
 
-- **Environment**: Grid size, state representation, reward shaping
-- **DQN**: Learning rate, epsilon decay, network architecture
-- **PPO**: Learning rate, GAE lambda, clipping parameter
-- **Training**: Number of episodes, evaluation frequency
+- **algorithm**: `"ppo"` or `"dqn"`
+- **ppo_rollout_steps**: 512 (steps per PPO update; 0 = every episode)
+- **reward_food** / **reward_death** / **reward_step**: terminal and per-step base rewards
+- **reward_distance**: scales Manhattan improvement toward food each step (default in config; reduces circling)
+- **training.algorithm**: `"ppo"` or `"dqn"` (project defaults to PPO in `configs/snake_config.yaml`)
+- **grid_size**: 15 (smaller = easier learning)
 
-## Key RL Concepts Explored
+## Colab
 
-1. **Exploration vs Exploitation**: Epsilon-greedy (DQN) vs entropy regularization (PPO)
-2. **Reward Shaping**: Sparse vs dense rewards, distance-based shaping
-3. **Value Functions**: Q-learning (DQN) vs policy gradients (PPO)
-4. **Experience Replay**: Importance of replay buffer in DQN
-5. **State Representation**: Impact of different state encodings
-6. **Hyperparameter Sensitivity**: Learning rates, network sizes, reward scales
-
-## Experiments
-
-Try different experiments:
-
-1. **Reward Function Comparison**: Modify reward_food, reward_death, reward_step
-2. **State Representation**: Switch between "grid", "feature", and "image"
-3. **Algorithm Comparison**: Train both DQN and PPO and compare performance
-4. **Grid Size**: Experiment with different grid sizes (10x10, 20x20, 30x30)
-5. **Network Architecture**: Adjust hidden layer sizes and activation functions
-
-## Results
-
-Training progress is automatically saved to:
-- `checkpoints/snake/<experiment_name>/<timestamp>/`
-- Training curves are saved as PNG files
-- Metrics are saved as JSON files
+Use `notebooks/colab_snake_setup.ipynb` for Google Colab. Clone the repo and run the cells.
 
 ## License
 

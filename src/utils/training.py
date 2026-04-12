@@ -4,10 +4,20 @@ Includes metrics tracking, checkpointing, and evaluation functions.
 """
 
 import numpy as np
+import torch
 from typing import Dict, List, Optional, Any
 import json
 import os
 from datetime import datetime
+
+
+def get_device() -> torch.device:
+    """Get best available device: CUDA > MPS (Apple Silicon) > CPU."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
 
 
 class MetricsTracker:
@@ -16,10 +26,10 @@ class MetricsTracker:
     def __init__(self):
         """Initialize metrics tracker."""
         self.episode_rewards = []
-        self.episode_scores = []  # Food eaten per episode
+        self.episode_scores = []
         self.episode_lengths = []
         self.training_losses = []
-        self.epsilon_values = []  # For DQN
+        self.epsilon_values = []
 
     def record_episode(
         self,
@@ -55,7 +65,7 @@ class MetricsTracker:
         Args:
             window: Number of recent episodes to consider
 
-        Returns: 
+        Returns:
             Dictionary with statistics
         """
         if len(self.episode_rewards) == 0:
@@ -108,9 +118,11 @@ class MetricsTracker:
         self.training_losses = data.get("training_losses", [])
         self.epsilon_values = data.get("epsilon_values", [])
 
-def create_checkpoint_dir(path: str):
-    """Creates a directory if it doesn't exist."""
+def create_checkpoint_dir(base_dir: str, experiment_name: Optional[str] = None) -> str:
+    """Create checkpoint directory; optionally nest under ``experiment_name``. Returns resolved path."""
+    path = os.path.join(base_dir, experiment_name) if experiment_name else base_dir
     os.makedirs(path, exist_ok=True)
+    return path
 
 def evaluate_agent(
     env,
@@ -143,7 +155,8 @@ def evaluate_agent(
         steps = 0
 
         while not done:
-            action = agent.act(state, deterministic=deterministic)
+            result = agent.act(state, deterministic=deterministic)
+            action = result[0] if isinstance(result, tuple) else result
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             total_reward += reward
@@ -151,17 +164,17 @@ def evaluate_agent(
             state = next_state
 
             if render:
-                # Pass specific arguments to renderer.render()
+
                 renderer.render(env.snake, env.food, env.score, env.steps)
 
         episode_rewards.append(total_reward)
         episode_lengths.append(steps)
-        episode_scores.append(env.score) # Fixed: Use env.score directly
+        episode_scores.append(env.score)
 
         if render:
             renderer.close()
 
-    # Calculate statistics
+
     mean_reward = np.mean(episode_rewards)
     std_reward = np.std(episode_rewards)
     max_reward = np.max(episode_rewards)

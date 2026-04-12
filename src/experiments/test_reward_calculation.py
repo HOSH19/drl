@@ -1,159 +1,80 @@
 """
-Test reward calculation step by step to find bugs.
+Sanity checks for SnakeEnv rewards: food / death / step, and optional distance shaping.
 """
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from environments import SnakeEnv
-import numpy as np
+
 
 def test_reward_calculation():
-    """Test reward calculation in detail."""
     print("=" * 70)
-    print("Testing Reward Calculation")
+    print("Bare reward checks (food / death / step)")
     print("=" * 70)
-    
+
     env = SnakeEnv(
         grid_size=10,
-        reward_food=50.0,
-        reward_death=-10.0,
-        reward_step=0.0,
-        reward_distance=1.0
+        reward_food=1.0,
+        reward_death=-1.0,
+        reward_step=-0.01,
     )
-    
-    # Reset and manually set up scenario
+
     state, info = env.reset()
     env.snake = [(5, 5)]
-    env.food = (3, 5)  # Food is 2 rows UP
+    env.food = (3, 5)
     env.direction = env.RIGHT
-    
-    print("\nInitial Setup:")
-    print(f"  Snake head: {env.snake[0]}")
-    print(f"  Food: {env.food}")
-    print(f"  Direction: {['UP', 'DOWN', 'LEFT', 'RIGHT'][env.direction]}")
-    print(f"  Distance to food: {env._distance_to_food(env.snake[0])}")
-    
-    # Test 1: Move toward food (UP)
-    print("\n" + "-" * 70)
-    print("Test 1: Move UP (toward food)")
-    print("-" * 70)
-    
+
+    print("\nTest 1: Ordinary step (no food)")
     old_head = env.snake[0]
-    old_dist = env._distance_to_food(old_head)
-    print(f"  Before step:")
-    print(f"    Old head: {old_head}")
-    print(f"    Old distance: {old_dist}")
-    print(f"    Food position: {env.food}")
-    
     action = env.UP
-    print(f"  Action: {['UP', 'DOWN', 'LEFT', 'RIGHT'][action]}")
-    
-    # Manually trace through step logic
-    dx, dy = env.directions[action]
-    print(f"  Direction vector: ({dx}, {dy})")
-    new_head = (old_head[0] + dx, old_head[1] + dy)
-    print(f"  Calculated new_head: {new_head}")
-    
-    # Execute step
-    next_state, reward, terminated, truncated, step_info = env.step(action)
-    
-    print(f"  After step:")
-    print(f"    Actual new head: {env.snake[0]}")
-    print(f"    New distance: {env._distance_to_food(env.snake[0])}")
-    print(f"    Food eaten: {step_info.get('food_eaten', False)}")
-    print(f"    Reward received: {reward:.2f}")
-    print(f"    Score: {env.score}")
-    
-    # Calculate expected reward
-    if env.snake[0] == env.food:
-        expected = env.reward_food + old_dist * env.reward_distance
-        print(f"  Expected reward (food eaten): {env.reward_food} + {old_dist} * {env.reward_distance} = {expected:.2f}")
-    else:
-        new_dist = env._distance_to_food(env.snake[0])
-        expected = env.reward_step + (old_dist - new_dist) * env.reward_distance
-        print(f"  Expected reward (no food): {env.reward_step} + ({old_dist} - {new_dist}) * {env.reward_distance} = {expected:.2f}")
-    
-    if abs(reward - expected) < 0.01:
-        print("  ✅ Reward matches expected!")
-    else:
-        print(f"  ❌ ERROR: Reward mismatch! Expected {expected:.2f}, got {reward:.2f}")
-    
-    # Test 2: Move away from food
-    print("\n" + "-" * 70)
-    print("Test 2: Move RIGHT (perpendicular, away from food)")
-    print("-" * 70)
-    
-    state, info = env.reset()
-    env.snake = [(5, 5)]
-    env.food = (3, 5)  # Food is UP
-    env.direction = env.UP
-    
-    old_head = env.snake[0]
-    old_dist = env._distance_to_food(old_head)
-    print(f"  Before step:")
-    print(f"    Old head: {old_head}")
-    print(f"    Old distance: {old_dist}")
-    
-    action = env.RIGHT
-    print(f"  Action: {['UP', 'DOWN', 'LEFT', 'RIGHT'][action]}")
-    
-    next_state, reward, terminated, truncated, step_info = env.step(action)
-    
-    print(f"  After step:")
-    print(f"    New head: {env.snake[0]}")
-    print(f"    New distance: {env._distance_to_food(env.snake[0])}")
-    print(f"    Reward received: {reward:.2f}")
-    
-    new_dist = env._distance_to_food(env.snake[0])
-    expected = env.reward_step + (old_dist - new_dist) * env.reward_distance
-    print(f"  Expected reward: {env.reward_step} + ({old_dist} - {new_dist}) * {env.reward_distance} = {expected:.2f}")
-    
-    if abs(reward - expected) < 0.01:
-        print("  ✅ Reward matches expected!")
-    else:
-        print(f"  ❌ ERROR: Reward mismatch! Expected {expected:.2f}, got {reward:.2f}")
-    
-    # Test 3: Actually eat food
-    print("\n" + "-" * 70)
-    print("Test 3: Move directly to food and eat it")
-    print("-" * 70)
-    
+    _, reward, terminated, truncated, step_info = env.step(action)
+    assert not step_info.get("food_eaten", False)
+    assert abs(reward - env.reward_step) < 1e-6, (reward, env.reward_step)
+    print(f"  reward={reward} (expected reward_step={env.reward_step}) OK")
+
+    print("\nTest 2: Eat food")
     state, info = env.reset()
     env.snake = [(4, 5)]
-    env.food = (3, 5)  # Food is directly UP (1 step away)
+    env.food = (3, 5)
     env.direction = env.RIGHT
-    
-    old_head = env.snake[0]
-    old_dist = env._distance_to_food(old_head)
-    print(f"  Before step:")
-    print(f"    Old head: {old_head}")
-    print(f"    Food: {env.food}")
-    print(f"    Old distance: {old_dist}")
-    
-    action = env.UP
-    print(f"  Action: {['UP', 'DOWN', 'LEFT', 'RIGHT'][action]}")
-    
-    next_state, reward, terminated, truncated, step_info = env.step(action)
-    
-    print(f"  After step:")
-    print(f"    New head: {env.snake[0]}")
-    print(f"    Food eaten: {step_info.get('food_eaten', False)}")
-    print(f"    Score: {env.score}")
-    print(f"    Reward received: {reward:.2f}")
-    
-    if step_info.get('food_eaten', False):
-        expected = env.reward_food + old_dist * env.reward_distance
-        print(f"  Expected reward: {env.reward_food} + {old_dist} * {env.reward_distance} = {expected:.2f}")
-        if abs(reward - expected) < 0.01:
-            print("  ✅ Reward matches expected!")
-        else:
-            print(f"  ❌ ERROR: Reward mismatch! Expected {expected:.2f}, got {reward:.2f}")
-    else:
-        print("  ❌ ERROR: Food should have been eaten!")
-    
+    _, reward, terminated, truncated, step_info = env.step(env.UP)
+    assert step_info.get("food_eaten", False)
+    assert abs(reward - env.reward_food) < 1e-6, (reward, env.reward_food)
+    print(f"  reward={reward} (expected reward_food={env.reward_food}) OK")
+
+    print("\nTest 3: Death (wall)")
+    state, info = env.reset()
+    env.snake = [(0, 5)]
+    env.food = (8, 8)
+    env.direction = env.RIGHT
+    _, reward, terminated, truncated, step_info = env.step(env.UP)
+    assert terminated
+    assert abs(reward - env.reward_death) < 1e-6, (reward, env.reward_death)
+    print(f"  reward={reward} (expected reward_death={env.reward_death}) OK")
+
     print("\n" + "=" * 70)
+
+
+def test_distance_shaping():
+    env = SnakeEnv(
+        grid_size=10,
+        reward_food=1.0,
+        reward_death=-1.0,
+        reward_step=0.0,
+        reward_distance=1.0,
+    )
+    env.reset()
+    env.snake = [(5, 5)]
+    env.food = (3, 5)
+    env.direction = env.RIGHT
+    _, reward, _, _, _ = env.step(env.UP)
+    assert abs(reward - 1.0) < 1e-6, reward
+
 
 if __name__ == "__main__":
     test_reward_calculation()
+    test_distance_shaping()
+    print("distance shaping OK")

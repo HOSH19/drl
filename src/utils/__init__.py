@@ -1,5 +1,5 @@
 from .replay_buffer import ReplayBuffer
-from .training import MetricsTracker, evaluate_agent, create_checkpoint_dir
+from .training import MetricsTracker, evaluate_agent, create_checkpoint_dir, get_device
 from .visualization import plot_training_curves, plot_algorithm_comparison, plot_policy_heatmap
 
 __all__ = [
@@ -7,6 +7,7 @@ __all__ = [
     'MetricsTracker',
     'evaluate_agent',
     'create_checkpoint_dir',
+    'get_device',
     'plot_training_curves',
     'plot_algorithm_comparison',
     'plot_policy_heatmap'
