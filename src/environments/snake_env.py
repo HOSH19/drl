@@ -43,6 +43,17 @@ class SnakeEnv(gym.Env):
         reward_distance: float = 0.0,
         render_mode: Optional[str] = None,
     ):
+        """
+        Args:
+            grid_size: Board side length in cells.
+            state_representation: ``feature``, ``grid``, or ``image``.
+            initial_length: Starting snake length (segments).
+            reward_food: Reward when eating food.
+            reward_death: Reward on wall or self-collision (episode ends).
+            reward_step: Base reward each non-terminal step.
+            reward_distance: Multiplier for Manhattan distance improvement toward food.
+            render_mode: Optional ``human`` or ``rgb_array`` for :meth:`render`.
+        """
         super().__init__()
 
         self.grid_size = grid_size
@@ -91,13 +102,16 @@ class SnakeEnv(gym.Env):
 
     @staticmethod
     def _cells_equal(a: Tuple[int, int], b: Tuple[int, int]) -> bool:
+        """Return True if two grid cells are the same coordinates."""
         return int(a[0]) == int(b[0]) and int(a[1]) == int(b[1])
 
     @staticmethod
     def _manhattan(a: Tuple[int, int], b: Tuple[int, int]) -> int:
+        """L1 distance between two cells."""
         return abs(int(a[0]) - int(b[0])) + abs(int(a[1]) - int(b[1]))
 
     def _is_opposite_direction(self, action: int, current_dir: int) -> bool:
+        """Return True if ``action`` is the reverse of ``current_dir``."""
         return (
             (action == self.UP and current_dir == self.DOWN)
             or (action == self.DOWN and current_dir == self.UP)
@@ -118,6 +132,7 @@ class SnakeEnv(gym.Env):
 
     @staticmethod
     def _in_bounds(pos: Tuple[int, int], grid_size: int) -> bool:
+        """Return True if ``pos`` lies inside the grid."""
         return 0 <= pos[0] < grid_size and 0 <= pos[1] < grid_size
 
     def _try_move(
@@ -138,6 +153,7 @@ class SnakeEnv(gym.Env):
         seed: Optional[int] = None,
         options: Optional[Dict] = None,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """Reset the episode: snake in the center, new food, zero score."""
         super().reset(seed=seed)
 
         center = self.grid_size // 2
@@ -162,6 +178,7 @@ class SnakeEnv(gym.Env):
         return observation, info
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
+        """Apply one action; return observation, reward, ``terminated``, ``truncated``, ``info``."""
         self.steps += 1
 
         head_x, head_y = self.snake[0]
@@ -213,6 +230,7 @@ class SnakeEnv(gym.Env):
         return observation, reward, terminated, truncated, info
 
     def _spawn_food(self) -> None:
+        """Place food on a random empty cell."""
         while True:
             food = (
                 int(self.np_random.integers(0, self.grid_size)),
@@ -223,6 +241,7 @@ class SnakeEnv(gym.Env):
                 break
 
     def _get_observation(self) -> np.ndarray:
+        """Dispatch to grid, feature, or image observation."""
         if self.state_representation == "grid":
             return self._get_grid_observation()
         if self.state_representation == "feature":
@@ -232,6 +251,7 @@ class SnakeEnv(gym.Env):
         raise ValueError(f"Unknown state_representation: {self.state_representation}")
 
     def _get_grid_observation(self) -> np.ndarray:
+        """Integer grid: empty, snake, food."""
         grid = np.zeros((self.grid_size, self.grid_size), dtype=np.int32)
         for segment in self.snake:
             grid[segment[0], segment[1]] = 1
@@ -253,6 +273,7 @@ class SnakeEnv(gym.Env):
         return forward, left
 
     def _get_feature_observation(self) -> np.ndarray:
+        """12-dim vector: normalized pose, ego food offsets, direction one-hot, length, dangers."""
         head_x, head_y = self.snake[0]
 
         head_x_norm = head_x / self.grid_size
@@ -282,16 +303,20 @@ class SnakeEnv(gym.Env):
         )
 
     def _check_dangers(self) -> Tuple[float, float, float]:
+        """Return 1.0 if moving straight / left / right from the head hits wall or body, else 0.0."""
         head_x, head_y = self.snake[0]
         dx, dy = self.directions[self.direction]
 
         def rotate_left(ddx, ddy):
+            """Rotate a direction vector 90° counter-clockwise."""
             return (-ddy, ddx)
 
         def rotate_right(ddx, ddy):
+            """Rotate a direction vector 90° clockwise."""
             return (ddy, -ddx)
 
         def check_danger(dx_check, dy_check):
+            """Return 1.0 if the adjacent cell in that offset is lethal."""
             next_pos = (head_x + dx_check, head_y + dy_check)
             if (
                 next_pos[0] < 0
@@ -312,6 +337,7 @@ class SnakeEnv(gym.Env):
         return danger_straight, danger_left, danger_right
 
     def _get_image_observation(self) -> np.ndarray:
+        """RGB uint8 tensor for convolutional models."""
         image = np.zeros((self.grid_size, self.grid_size, 3), dtype=np.uint8)
         for segment in self.snake:
             image[segment[0], segment[1]] = [0, 255, 0]
@@ -322,6 +348,7 @@ class SnakeEnv(gym.Env):
         return image
 
     def render(self):
+        """Draw the game (``human``) or return an RGB array (``rgb_array``)."""
         if self.render_mode == "human":
             from .snake_renderer import SnakeRenderer
 
@@ -332,6 +359,7 @@ class SnakeEnv(gym.Env):
             return self._get_image_observation()
 
     def close(self):
+        """Release matplotlib renderer resources if any."""
         r = getattr(self, "_renderer", None)
         if r is not None:
             r.close()

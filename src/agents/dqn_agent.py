@@ -23,6 +23,8 @@ except ImportError:
 
 
 class DQNAgent:
+    """DQN with replay buffer, target network, and epsilon-greedy exploration."""
+
     def __init__(
         self,
         state_shape: Tuple,
@@ -41,6 +43,26 @@ class DQNAgent:
         device: Optional[torch.device] = None,
         seed: Optional[int] = None,
     ):
+        """
+        Build Q- and target networks, optimizer, and replay buffer.
+
+        Args:
+            state_shape: Observation shape (feature length or grid dimensions).
+            num_actions: Discrete action count.
+            learning_rate: Adam learning rate.
+            gamma: Discount factor.
+            epsilon_start: Initial exploration rate.
+            epsilon_end: Floor for epsilon after decay.
+            epsilon_decay: Per-step multiplicative decay (after each train step).
+            replay_buffer_size: Max transitions stored.
+            batch_size: SGD minibatch size.
+            target_update_frequency: Copy online weights to target every N train steps.
+            hidden_sizes: MLP widths (feature/grid) or FC head (image).
+            activation: ``relu``, ``tanh``, or ``elu``.
+            state_representation: ``feature``, ``grid``, or ``image``.
+            device: Torch device; default CUDA else CPU.
+            seed: Optional RNG seed for numpy/torch/replay.
+        """
         if hidden_sizes is None:
             hidden_sizes = [128, 128, 64]
 
@@ -81,6 +103,7 @@ class DQNAgent:
         self.replay_buffer = ReplayBuffer(replay_buffer_size, state_shape, seed=seed)
 
     def _state_to_tensor(self, state: np.ndarray) -> torch.Tensor:
+        """Convert a single observation to a float batch of shape ``(1, ...)`` on ``device``."""
         x = np.asarray(state)
         t = torch.as_tensor(x, dtype=torch.float32, device=self.device)
         if t.dim() == 0:
@@ -92,6 +115,7 @@ class DQNAgent:
         state: Union[np.ndarray, torch.Tensor],
         deterministic: bool = False,
     ) -> Union[int, Tuple]:
+        """Epsilon-greedy action; greedy if ``deterministic`` or after exploration draw."""
         if not deterministic and random.random() < self.epsilon:
             return int(np.random.randint(0, self.num_actions))
 
@@ -114,9 +138,11 @@ class DQNAgent:
         next_state: np.ndarray,
         done: bool,
     ) -> None:
+        """Append one transition to the replay buffer."""
         self.replay_buffer.add(state, action, reward, next_state, done)
 
     def train_step(self) -> Dict[str, float]:
+        """One gradient step from a replay minibatch; decay epsilon; periodic target sync."""
         if len(self.replay_buffer) < self.batch_size:
             return {"loss": 0.0, "epsilon": self.epsilon}
 
@@ -153,14 +179,17 @@ class DQNAgent:
         return {"loss": li, "epsilon": self.epsilon}
 
     def eval(self) -> None:
+        """Set Q-networks to eval mode (no dropout)."""
         self.q_network.eval()
         self.target_network.eval()
 
     def train(self) -> None:
+        """Set Q-networks to training mode."""
         self.q_network.train()
         self.target_network.train()
 
     def save(self, filepath: str) -> None:
+        """Persist weights, optimizer, epsilon, and metadata to ``filepath``."""
         checkpoint = {
             "algorithm": "dqn",
             "q_network_state_dict": self.q_network.state_dict(),
@@ -179,6 +208,7 @@ class DQNAgent:
         print(f"Model saved to {filepath}")
 
     def load(self, filepath: str) -> None:
+        """Load checkpoint produced by :meth:`save`."""
         checkpoint = torch.load(filepath, map_location=self.device, weights_only=False)
         self.q_network.load_state_dict(checkpoint["q_network_state_dict"])
         tgt = checkpoint.get("target_network_state_dict")

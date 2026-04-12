@@ -49,7 +49,7 @@ class SnakeRenderer:
         food: Optional[Tuple[int, int]],
         score: int = 0,
         steps: int = 0
-    ):
+    ) -> None:
         """
         Render the current game state.
 
@@ -177,8 +177,8 @@ class SnakeRenderer:
         if hasattr(self, "_jupyter_display_id"):
             del self._jupyter_display_id
 
-    def close(self):
-        """Close the renderer."""
+    def close(self) -> None:
+        """Close matplotlib figures and clear Jupyter display binding."""
         if self.fig:
             plt.close(self.fig)
         self.fig = None

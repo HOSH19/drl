@@ -20,11 +20,12 @@ drl/
 │   ├── utils/            # Training utilities, visualization
 │   └── experiments/      # train_snake.py, evaluate_snake.py
 ├── configs/              # snake_config.yaml
+├── tests/                # pytest (e.g. reward sanity checks)
 ├── notebooks/
 │   ├── snake_experiments.ipynb   # Interactive training & experiments
 │   ├── watch_agent_play.ipynb    # Watch trained agent
 │   └── colab_snake_setup.ipynb   # Google Colab setup
-├── run_snake_training.py  # Quick-start script (flat checkpoints)
+├── run_snake_training.py  # Thin CLI wrapper (calls train_snake)
 └── requirements.txt
 ```
 
@@ -41,21 +42,19 @@ pip install -r requirements.txt
 
 ### Option 1: Training script (recommended)
 
-```bash
-# Train (saves to checkpoints/snake/)
-python run_snake_training.py
+`run_snake_training.py` adds `src/` to the path and invokes `experiments.train_snake` (same as below).
 
-# Watch trained agent
+```bash
+python run_snake_training.py --config configs/snake_config.yaml
+
 python run_snake_training.py --watch --checkpoint checkpoints/snake/best_model.pth
 ```
 
 ### Option 2: Experiment script (timestamped checkpoints)
 
 ```bash
-# Train (saves to checkpoints/snake/snake_ppo/YYYYMMDD_HHMMSS/)
 python src/experiments/train_snake.py --config configs/snake_config.yaml
 
-# Watch
 python src/experiments/train_snake.py --watch --checkpoint checkpoints/snake/snake_ppo/20250217_120000/best_model.pth
 ```
 
@@ -63,11 +62,15 @@ python src/experiments/train_snake.py --watch --checkpoint checkpoints/snake/sna
 
 ```bash
 jupyter notebook notebooks/snake_experiments.ipynb
-# or
-jupyter notebook notebooks/watch_agent_play.ipynb
 ```
 
 Run from project root. Notebooks auto-detect project directory.
+
+## Tests
+
+```bash
+python -m pytest tests/ -v
+```
 
 ## Configuration
 
@@ -77,7 +80,6 @@ Edit `configs/snake_config.yaml`:
 - **ppo_rollout_steps**: 512 (steps per PPO update; 0 = every episode)
 - **reward_food** / **reward_death** / **reward_step**: terminal and per-step base rewards
 - **reward_distance**: scales Manhattan improvement toward food each step (default in config; reduces circling)
-- **training.algorithm**: `"ppo"` or `"dqn"` (project defaults to PPO in `configs/snake_config.yaml`)
 - **grid_size**: 15 (smaller = easier learning)
 
 ## Colab

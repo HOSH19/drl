@@ -13,7 +13,7 @@ def plot_training_curves(
     metrics_tracker,
     save_path: Optional[str] = None,
     window: int = 100
-):
+) -> None:
     """
     Plot training curves for rewards, scores, and episode lengths.
 
@@ -128,7 +128,7 @@ def plot_algorithm_comparison(
     metrics_dict: Dict[str, Any],
     save_path: Optional[str] = None,
     window: int = 100
-):
+) -> None:
     """
     Compare multiple algorithms' performance.
 
@@ -217,7 +217,7 @@ def plot_policy_heatmap(
     env,
     grid_size: int = 20,
     save_path: Optional[str] = None
-):
+) -> None:
     """
     Visualize policy as heatmap showing action probabilities.
 

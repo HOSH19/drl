@@ -95,7 +95,7 @@ class MetricsTracker:
 
         return stats
 
-    def save(self, filepath: str):
+    def save(self, filepath: str) -> None:
         """Save metrics to JSON file."""
         data = {
             "episode_rewards": self.episode_rewards,
@@ -108,7 +108,7 @@ class MetricsTracker:
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
 
-    def load(self, filepath: str):
+    def load(self, filepath: str) -> None:
         """Load metrics from JSON file."""
         with open(filepath, 'r') as f:
             data = json.load(f)
@@ -139,13 +139,15 @@ def evaluate_agent(
         agent: Agent instance
         num_episodes: Number of episodes to evaluate
         render: Whether to render
+        deterministic: If True, policy is greedy (no sampling)
     """
     episode_rewards = []
     episode_scores = []
     episode_lengths = []
 
     if render:
-        from src.environments.snake_renderer import SnakeRenderer
+        from environments.snake_renderer import SnakeRenderer
+
         renderer = SnakeRenderer(env.grid_size)
 
     for _ in range(num_episodes):

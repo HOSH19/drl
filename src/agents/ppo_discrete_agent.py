@@ -220,7 +220,7 @@ class PPODiscreteAgent:
         log_prob: float,
         value: float,
         done: bool
-    ):
+    ) -> None:
         """
         Store transition in buffer.
 
@@ -390,18 +390,18 @@ class PPODiscreteAgent:
         self.training_losses.append(metrics["loss"])
         return metrics
 
-    def eval(self):
-        """Set agent to evaluation mode."""
+    def eval(self) -> None:
+        """Set actor and critic to evaluation mode."""
         self.actor.eval()
         self.critic.eval()
 
-    def train(self):
-        """Set agent to training mode."""
+    def train(self) -> None:
+        """Set actor and critic to training mode."""
         self.actor.train()
         self.critic.train()
 
-    def save(self, filepath: str):
-        """Save agent state to file."""
+    def save(self, filepath: str) -> None:
+        """Persist actor, critic, and optimizer state to disk."""
         checkpoint = {
             "actor_state_dict": self.actor.state_dict(),
             "critic_state_dict": self.critic.state_dict(),
@@ -414,8 +414,8 @@ class PPODiscreteAgent:
         torch.save(checkpoint, filepath)
         print(f"Model saved to {filepath}")
 
-    def load(self, filepath: str):
-        """Load agent state from file."""
+    def load(self, filepath: str) -> None:
+        """Restore weights from :meth:`save`."""
         checkpoint = torch.load(filepath, map_location=self.device, weights_only=False)
         self.actor.load_state_dict(checkpoint["actor_state_dict"])
         self.critic.load_state_dict(checkpoint["critic_state_dict"])

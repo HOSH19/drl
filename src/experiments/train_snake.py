@@ -22,7 +22,7 @@ from utils.training import MetricsTracker, evaluate_agent, create_checkpoint_dir
 from utils.visualization import plot_training_curves
 
 
-def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir):
+def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir) -> None:
     """Train DQN agent."""
     total_episodes = config['training']['total_episodes']
     eval_frequency = config['training']['eval_frequency']
@@ -120,7 +120,7 @@ def train_dqn(env, agent, config, metrics_tracker, checkpoint_dir):
     print(f"Best score: {best_score:.2f}")
 
 
-def train_ppo(env, agent, config, metrics_tracker, checkpoint_dir):
+def train_ppo(env, agent, config, metrics_tracker, checkpoint_dir) -> None:
     """Train PPO agent with optional rollout-based updates."""
     total_episodes = config['training']['total_episodes']
     eval_frequency = config['training']['eval_frequency']
@@ -214,8 +214,8 @@ def train_ppo(env, agent, config, metrics_tracker, checkpoint_dir):
     print(f"Best score: {best_score:.2f}")
 
 
-def watch_agent(env, agent, num_episodes=3):
-    """Watch trained agent play (text output)."""
+def watch_agent(env, agent, num_episodes: int = 3) -> None:
+    """Roll out deterministic episodes and print score, steps, and return per episode."""
     for ep in range(num_episodes):
         state, info = env.reset()
         done = False
@@ -231,7 +231,8 @@ def watch_agent(env, agent, num_episodes=3):
         print(f"Episode {ep + 1}: Score={env.score}, Steps={steps}, Reward={total_reward:.2f}")
 
 
-def main():
+def main() -> None:
+    """CLI entry: train DQN or PPO from YAML, or load a checkpoint and watch."""
     parser = argparse.ArgumentParser(description='Train Snake RL Agent')
     parser.add_argument(
         '--config',

@@ -23,7 +23,7 @@ from utils.training import evaluate_agent
 from utils.visualization import plot_policy_heatmap
 
 
-def create_game_video(env, agent, num_episodes=3, save_dir="./videos"):
+def create_game_video(env, agent, num_episodes: int = 3, save_dir: str = "./videos") -> None:
     """
     Create video of agent playing the game.
 
@@ -85,7 +85,8 @@ def create_game_video(env, agent, num_episodes=3, save_dir="./videos"):
     agent.train()
 
 
-def main():
+def main() -> None:
+    """Load a checkpoint from CLI args and run evaluation or optional video / heatmap."""
     parser = argparse.ArgumentParser(description='Evaluate Snake RL Agent')
     parser.add_argument(
         '--config',
